@@ -8,6 +8,8 @@ def exportHistoryData(self, exportType):
     import flask
     import csv
     import StringIO
+    import json
+    import pandas as pd
 
     history_dict = self._getHistoryDict()
 
@@ -33,6 +35,23 @@ def exportHistoryData(self, exportType):
             response = flask.make_response(si.getvalue())
             response.headers["Content-type"] = "text/csv"
             response.headers["Content-Disposition"] = "attachment; filename=octoprint_print_history_export.csv"
+        elif exportType == 'csv_extra':
+            data_frame = pd.DataFrame()
+            for historyDetails in history_dict:
+                fields = ["fileName", "timestamp", "success", "printTime", "filamentLength", "filamentVolume"]
+                row = {field: historyDetails.get(field, "-") for field in fields}
+                parameters_json = historyDetails.get("parameters")
+                try:
+                    parameters = json.loads(parameters_json)
+                except ValueError:
+                    parameters = {"parameters": "-"}
+                row.update(parameters)
+                data_frame = data_frame.append(pd.DataFrame([row]))
+
+            data_frame.to_csv(si)
+            response = flask.make_response(si.getvalue())
+            response.headers["Content-type"] = "text/csv"
+            response.headers["Content-Disposition"] = "attachment; filename=octoprint_print_history(extra)_export.csv"
         elif exportType == 'excel':
             import xlsxwriter
 
@@ -51,7 +70,6 @@ def exportHistoryData(self, exportType):
                 worksheet.write(row, 3, (historyDetails["printTime"] if "printTime" in historyDetails and historyDetails["printTime"] is not None else "-"))
                 worksheet.write(row, 4, (historyDetails["filamentLength"] if "filamentLength" in historyDetails and historyDetails["filamentLength"] is not None else "-"))
                 worksheet.write(row, 5, (historyDetails["filamentVolume"] if "filamentVolume" in historyDetails and historyDetails["filamentVolume"] is not None else "-"))
-
                 row += 1
 
             workbook.close()
