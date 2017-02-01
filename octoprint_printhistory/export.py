@@ -47,7 +47,12 @@ def exportHistoryData(self, exportType):
                     parameters = {"parameters": "-"}
                 row.update(parameters)
                 data_frame = data_frame.append(pd.DataFrame([row]))
-
+            data_frame.rename(columns={key: value for key, value in zip(fields, headers)},inplace=True)
+            rearranged_header = headers[:]
+            for column in data_frame.columns:
+                if column not in headers:
+                    rearranged_header.append(column)
+            data_frame = data_frame[rearranged_header]
             data_frame.to_csv(si)
             response = flask.make_response(si.getvalue())
             response.headers["Content-type"] = "text/csv"
