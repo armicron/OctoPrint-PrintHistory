@@ -53,6 +53,20 @@ def exportHistoryData(self, exportType):
                 if column not in headers:
                     rearranged_header.append(column)
             data_frame = data_frame[rearranged_header]
+            try:
+                for column in ["Plastic volume", "Plastic weight", "Filament length Gcode"]:
+                    data_frame[column].replace({"\s.*": ""}, regex=True, inplace=True)
+            except KeyError:
+                pass
+            try:
+                hm = data_frame["Build time"].str.extract("(\d+) hours (\d+) minutes", expand=True)
+                # we can't convert values to integers until there are NaNs
+                hm.fillna(0, inplace=True)
+                data_frame["Build time"] = hm[0].astype(int)*60 + hm[1].astype(int)
+                # revert back zeroes to NaNs
+                data_frame["Build time"].replace(0, "NaN")
+            except KeyError:
+                pass
             data_frame.to_csv(si)
             response = flask.make_response(si.getvalue())
             response.headers["Content-type"] = "text/csv"
